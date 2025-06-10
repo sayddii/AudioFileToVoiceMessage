@@ -55,21 +55,26 @@ def run_bot():
     while True:
         try:
             logger.info("Starting bot polling...")
+            # Remove restart_on_change for stability
             bot.infinity_polling(
                 skip_pending=True,
                 interval=2,
-                timeout=30,
-                restart_on_change=True
+                timeout=30
             )
         except Exception as e:
             logger.error(f"Bot crashed: {e}. Restarting in 10s...")
             time.sleep(10)
 
 if __name__ == '__main__':
-    # Start Flask server in a separate thread
+    # Start Flask server
     flask_thread = threading.Thread(
         target=app.run,
-        kwargs={'host': '0.0.0.0', 'port': int(os.getenv('PORT', 5000))},
+        kwargs={
+            'host': '0.0.0.0',
+            'port': int(os.getenv('PORT', 5000)),
+            'debug': False,
+            'use_reloader': False
+        },
         daemon=True
     )
     flask_thread.start()
