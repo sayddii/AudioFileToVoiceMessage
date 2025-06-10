@@ -5,8 +5,6 @@ _A Telegram bot that magically converts audio files to voice messages_
 [![Telegram Bot API](https://img.shields.io/badge/pyTelegramBotAPI-4.9.0-green.svg)](https://github.com/eternnoir/pyTelegramBotAPI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![Demo](demo.gif) *(Replace with your actual demo GIF)*
-
 ## 🌟 Why This Bot?
 - Converts audio messages to Telegram's native voice format
 - Preserves original captions and formatting
