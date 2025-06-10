@@ -6,14 +6,10 @@ services:
     buildCommand: |
       pip install -r requirements.txt
       python -c "import os; open('.env', 'w').write(f'TOKEN={os.environ['TOKEN']}\nPORT=10000')"
-    startCommand: gunicorn --workers 2 --threads 4 --timeout 60 app:app
+    startCommand: gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 60 app:app
     envVars:
       - key: TOKEN
-        sync: false  # Prevents value from being visible in Render dashboard
+        sync: false
       - key: PORT
         value: 10000
-      - key: PYTHONUNBUFFERED
-        value: 1
-    healthCheckPath: /health
-    autoDeploy: true  # Automatic deploys on git push
     plan: free
