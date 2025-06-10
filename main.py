@@ -1,14 +1,19 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import os
-import time
-import threading
+from flask import Flask, request
 import telebot
 import logging
-from flask import Flask
 
-# Initialize Flask
+# Initialize
 app = Flask(__name__)
+TOKEN = os.getenv('TOKEN')
+bot = telebot.TeleBot(TOKEN)
+
+# Configure logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 @app.route('/')
 def home():
@@ -18,68 +23,31 @@ def home():
 def health_check():
     return "OK", 200
 
-# Configure logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
-TOKEN = os.getenv('TOKEN')
-if not TOKEN:
-    logger.error("Missing TOKEN environment variable")
-    exit(1)
-
-bot = telebot.TeleBot(TOKEN)
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return ''
+    return 'Bad request', 400
 
 @bot.message_handler(commands=['start', 'help'])
-def start_command_handler(message):
-    bot.reply_to(message, "🎧 Send me an audio file to convert to voice message!")
+def start(message):
+    bot.reply_to(message, "Send me an audio file to convert to voice message!")
 
 @bot.message_handler(content_types=['audio'])
-def audio_handler(message):
+def handle_audio(message):
     try:
         file_info = bot.get_file(message.audio.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
-        bot.send_voice(
-            message.chat.id,
-            downloaded_file,
-            reply_to_message_id=message.message_id
-        )
+        bot.send_voice(message.chat.id, downloaded_file)
     except Exception as e:
-        logger.error(f"Audio processing error: {e}")
-        bot.reply_to(message, "⚠️ Error processing audio. Please try again.")
-
-def run_bot():
-    while True:
-        try:
-            logger.info("Starting bot with webhook...")
-            # Critical change: Use webhook instead of polling
-            bot.remove_webhook()
-            time.sleep(1)
-            bot.set_webhook(url="https://your-render-url.onrender.com/" + TOKEN)
-            break
-        except Exception as e:
-            logger.error(f"Webhook setup failed: {e}. Retrying in 10s...")
-            time.sleep(10)
+        logger.error(f"Error: {e}")
+        bot.reply_to(message, "Error processing audio")
 
 if __name__ == '__main__':
-    # Start Flask in a thread
-    flask_thread = threading.Thread(
-        target=app.run,
-        kwargs={
-            'host': '0.0.0.0',
-            'port': int(os.getenv('PORT', 5000)),
-            'debug': False,
-            'use_reloader': False
-        },
-        daemon=True
-    )
-    flask_thread.start()
-    
-    # Setup webhook
-    run_bot()
-    
-    # Keep the application running
-    while True:
-        time.sleep(1000)
+    # Remove and set new webhook
+    bot.remove_webhook()
+    bot.set_webhook(url=f"https://your-render-service.onrender.com/{TOKEN}")
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 10000)))
