@@ -4,16 +4,15 @@ import os
 import time
 import threading
 import telebot
-from telebot import apihelper
 import logging
-
-# Initialize Flask app
 from flask import Flask
+
+# Initialize Flask
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot is running!", 200
+    return "Bot is running", 200
 
 @app.route('/health')
 def health_check():
@@ -35,7 +34,7 @@ bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start', 'help'])
 def start_command_handler(message):
-    bot.reply_to(message, "🎧 Send me an audio file to convert it to a voice message!")
+    bot.reply_to(message, "🎧 Send me an audio file to convert to voice message!")
 
 @bot.message_handler(content_types=['audio'])
 def audio_handler(message):
@@ -48,25 +47,24 @@ def audio_handler(message):
             reply_to_message_id=message.message_id
         )
     except Exception as e:
-        logger.error(f"Audio processing failed: {e}")
-        bot.reply_to(message, "⚠️ Conversion failed. Please try another file.")
+        logger.error(f"Audio processing error: {e}")
+        bot.reply_to(message, "⚠️ Error processing audio. Please try again.")
 
 def run_bot():
     while True:
         try:
-            logger.info("Starting bot polling...")
-            # Remove restart_on_change for stability
-            bot.infinity_polling(
-                skip_pending=True,
-                interval=2,
-                timeout=30
-            )
+            logger.info("Starting bot with webhook...")
+            # Critical change: Use webhook instead of polling
+            bot.remove_webhook()
+            time.sleep(1)
+            bot.set_webhook(url="https://your-render-url.onrender.com/" + TOKEN)
+            break
         except Exception as e:
-            logger.error(f"Bot crashed: {e}. Restarting in 10s...")
+            logger.error(f"Webhook setup failed: {e}. Retrying in 10s...")
             time.sleep(10)
 
 if __name__ == '__main__':
-    # Start Flask server
+    # Start Flask in a thread
     flask_thread = threading.Thread(
         target=app.run,
         kwargs={
@@ -79,5 +77,9 @@ if __name__ == '__main__':
     )
     flask_thread.start()
     
-    # Start bot
+    # Setup webhook
     run_bot()
+    
+    # Keep the application running
+    while True:
+        time.sleep(1000)
